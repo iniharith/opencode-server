@@ -13,8 +13,6 @@ COPY gateway/package.json ./
 RUN npm install --omit=dev
 COPY gateway/ ./
 
-WORKDIR /workspace
-
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

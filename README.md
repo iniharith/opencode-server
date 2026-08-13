@@ -45,5 +45,5 @@ The app talks to the API directly with Basic Auth, so it never sees the themed p
 
 ## Notes
 
-- Repos are re-cloned/pulled on every container restart (Railway containers don't persist disk between deploys unless you attach a volume). If you want your `/workspace` clones to survive restarts without re-cloning, add a Railway volume mounted at `/workspace`.
+- Repos are cloned into `~/projects` (so they show up in the "Open Project" browser, which lists from `$HOME`) and re-pulled on every container restart. Railway containers don't persist disk between deploys unless you attach a volume — if you want clones to survive restarts without re-cloning every time, add a Railway volume mounted at `/root/projects`.
 - Keep this project completely separate from your `shop-co` Railway project — don't add this service inside the same project as your production backend.

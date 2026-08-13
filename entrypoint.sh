@@ -37,13 +37,14 @@ if [ -z "$APP_PASSWORD" ]; then
   echo "WARNING: APP_PASSWORD is not set. The gateway will reject all logins until it is configured in Railway Variables."
 fi
 
-# Clone your repos into /workspace so opencode has something to work on.
-mkdir -p /workspace
+# Clone your repos so opencode's "Open Project" browser (which lists from $HOME) can see them.
+PROJECTS_DIR="$HOME/projects"
+mkdir -p "$PROJECTS_DIR"
 
 clone_or_pull() {
   url="$1"
   name=$(basename "$url" .git)
-  target="/workspace/$name"
+  target="$PROJECTS_DIR/$name"
   if [ -d "$target/.git" ]; then
     echo "Updating $name..."
     git -C "$target" pull --ff-only || echo "WARNING: pull failed for $name, keeping existing copy"
@@ -84,13 +85,13 @@ if [ -n "$GIT_REPOS" ]; then
 fi
 
 if [ -z "$GITHUB_USERNAME" ] && [ -z "$GIT_REPOS" ]; then
-  echo "NOTE: neither GITHUB_USERNAME nor GIT_REPOS is set — /workspace will stay empty."
+  echo "NOTE: neither GITHUB_USERNAME nor GIT_REPOS is set — $PROJECTS_DIR will stay empty."
 fi
 
 # opencode server itself stays private, reachable only inside the container
 export OPENCODE_SERVER_USERNAME="${APP_USERNAME:-opencode}"
 export OPENCODE_SERVER_PASSWORD="${APP_PASSWORD:-}"
-cd /workspace
+cd "$PROJECTS_DIR"
 opencode serve --hostname 127.0.0.1 --port 4096 &
 OPENCODE_PID=$!
 
