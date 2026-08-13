@@ -127,7 +127,7 @@ function renderLogin({ error, next } = {}) {
     ${error ? `<div class="error">${error}</div>` : ""}
     <button type="submit">Enter</button>
   </form>
-  <div class="foot">kampungcetak.com · iniharith</div>
+  <div class="foot">iniharith / opencode</div>
 </body>
 </html>`;
 }

@@ -25,6 +25,8 @@ git push -u origin main
    - `APP_PASSWORD` — pick a strong password. This is the ONE password used both by OpenCode Mobile (as Basic Auth) and by the themed browser login page.
    - `APP_USERNAME` — optional, defaults to `opencode`.
    - `OPENCODE_ZEN_API_KEY` — your OpenCode Zen API key (for the Big Pickle model), from https://opencode.ai/zen.
+   - `GIT_REPOS` — comma-separated list of repo URLs to clone into `/workspace` on startup, e.g. `https://github.com/iniharith/shop-co.git,https://github.com/iniharith/NothingLyrics.git`. Without this, `/workspace` stays empty and opencode has nothing to open.
+   - `GITHUB_TOKEN` — a GitHub Personal Access Token (repo read scope) if any of those repos are private.
 
    Internally, `opencode serve` runs privately on `127.0.0.1:4096` inside the container. A small gateway (`gateway/`) is the only thing actually exposed publicly — it proxies through to opencode, injecting the right auth automatically.
 4. Go to **Settings > Networking > Generate Domain**. You'll get a URL like `https://opencode-server-production.up.railway.app`.
@@ -43,5 +45,5 @@ The app talks to the API directly with Basic Auth, so it never sees the themed p
 
 ## Notes
 
-- This container starts with an empty `/workspace`. If you want opencode to work on your actual repos (shop-co, NothingLyrics, etc.), you'll need to either `git clone` them into the container (e.g. via a startup script with a `GITHUB_TOKEN` env var for private repos), or mount a persistent Railway volume so cloned repos survive restarts.
+- Repos are re-cloned/pulled on every container restart (Railway containers don't persist disk between deploys unless you attach a volume). If you want your `/workspace` clones to survive restarts without re-cloning, add a Railway volume mounted at `/workspace`.
 - Keep this project completely separate from your `shop-co` Railway project — don't add this service inside the same project as your production backend.
