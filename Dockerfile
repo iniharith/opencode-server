@@ -7,10 +7,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
 # Install opencode globally
 RUN npm install -g opencode-ai@latest
 
+# Gateway (themed login + proxy) dependencies
+WORKDIR /gateway
+COPY gateway/package.json ./
+RUN npm install --omit=dev
+COPY gateway/ ./
+
 WORKDIR /workspace
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Railway injects PORT at runtime; opencode needs 0.0.0.0 so it's reachable from outside the container
+# Railway injects PORT at runtime; the gateway binds to it and proxies internally to opencode
 CMD ["/entrypoint.sh"]

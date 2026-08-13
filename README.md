@@ -22,26 +22,24 @@ git push -u origin main
 1. New Project > Deploy from GitHub repo > select `opencode-server`.
 2. Railway detects the `Dockerfile` automatically and builds it.
 3. Go to **Variables** and add:
-   - `OPENCODE_SERVER_PASSWORD` — pick a strong password, this protects your server since it's public.
-   - `OPENCODE_ZEN_API_KEY` — your OpenCode Zen API key (for the Big Pickle model). Get this from https://opencode.ai/zen after signing in and adding billing details (Big Pickle itself is free, but Zen still requires an account + API key).
+   - `APP_PASSWORD` — pick a strong password. This is the ONE password used both by OpenCode Mobile (as Basic Auth) and by the themed browser login page.
+   - `APP_USERNAME` — optional, defaults to `opencode`.
+   - `OPENCODE_ZEN_API_KEY` — your OpenCode Zen API key (for the Big Pickle model), from https://opencode.ai/zen.
 
-   The container's `entrypoint.sh` writes this into `~/.config/opencode/opencode.json` automatically on startup, so `opencode/big-pickle` is available as soon as the service boots — no manual `/connect` step needed.
+   Internally, `opencode serve` runs privately on `127.0.0.1:4096` inside the container. A small gateway (`gateway/`) is the only thing actually exposed publicly — it proxies through to opencode, injecting the right auth automatically.
 4. Go to **Settings > Networking > Generate Domain**. You'll get a URL like `https://opencode-server-production.up.railway.app`.
 
 ## 3. Test it
 
-From your phone's browser:
-
-```
-https://<your-railway-domain>/global/health
-```
-
-Should return `{"healthy":true}`.
+Open the domain in a normal browser — you'll see a themed login page (styled to match iniharith.github.io). Enter `APP_PASSWORD` to get in.
 
 ## 4. Connect from OpenCode Mobile
 
 - Server URL: `https://<your-railway-domain>`
-- Username/password: whatever you set as `OPENCODE_SERVER_PASSWORD` (and `OPENCODE_SERVER_USERNAME` if you set one).
+- Username: `APP_USERNAME` (default `opencode`)
+- Password: `APP_PASSWORD`
+
+The app talks to the API directly with Basic Auth, so it never sees the themed page — that only shows up when you open the link in a regular browser.
 
 ## Notes
 

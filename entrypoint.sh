@@ -33,4 +33,26 @@ cat > "$CONFIG_DIR/opencode.json" <<EOF
 }
 EOF
 
-exec opencode serve --hostname 0.0.0.0 --port "${PORT:-4096}"
+if [ -z "$APP_PASSWORD" ]; then
+  echo "WARNING: APP_PASSWORD is not set. The gateway will reject all logins until it is configured in Railway Variables."
+fi
+
+# opencode server itself stays private, reachable only inside the container
+export OPENCODE_SERVER_USERNAME="${APP_USERNAME:-opencode}"
+export OPENCODE_SERVER_PASSWORD="${APP_PASSWORD:-}"
+opencode serve --hostname 127.0.0.1 --port 4096 &
+OPENCODE_PID=$!
+
+# give opencode a moment to boot before the gateway starts proxying to it
+sleep 2
+
+# gateway is what's actually exposed publicly (Railway's $PORT)
+cd /gateway
+APP_USERNAME="${APP_USERNAME:-opencode}" \
+APP_PASSWORD="$APP_PASSWORD" \
+OPENCODE_INTERNAL_URL="http://127.0.0.1:4096" \
+PORT="${PORT:-8080}" \
+node server.js &
+GATEWAY_PID=$!
+
+wait -n "$OPENCODE_PID" "$GATEWAY_PID"
