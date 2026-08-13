@@ -1,7 +1,7 @@
 FROM node:20-slim
 
 # git is needed so opencode can clone/work with your repos inside the container
-RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates bash \
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates bash curl jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Install opencode globally

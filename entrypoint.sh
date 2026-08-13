@@ -37,33 +37,54 @@ if [ -z "$APP_PASSWORD" ]; then
   echo "WARNING: APP_PASSWORD is not set. The gateway will reject all logins until it is configured in Railway Variables."
 fi
 
-# Clone your actual repos into /workspace so opencode has something to work on.
-# Set GIT_REPOS in Railway Variables as a comma-separated list, e.g.:
-#   https://github.com/iniharith/shop-co.git,https://github.com/iniharith/NothingLyrics.git
-# For private repos, also set GITHUB_TOKEN (a GitHub Personal Access Token with repo read access).
+# Clone your repos into /workspace so opencode has something to work on.
 mkdir -p /workspace
+
+clone_or_pull() {
+  url="$1"
+  name=$(basename "$url" .git)
+  target="/workspace/$name"
+  if [ -d "$target/.git" ]; then
+    echo "Updating $name..."
+    git -C "$target" pull --ff-only || echo "WARNING: pull failed for $name, keeping existing copy"
+  else
+    echo "Cloning $name..."
+    git clone "$url" "$target" || echo "WARNING: clone failed for $name"
+  fi
+}
+
+# Option A: auto-discover ALL public repos for a GitHub username via the API.
+if [ -n "$GITHUB_USERNAME" ]; then
+  echo "Discovering public repos for $GITHUB_USERNAME..."
+  page=1
+  while :; do
+    resp=$(curl -sf "https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&page=${page}" || echo "[]")
+    count=$(echo "$resp" | jq 'length' 2>/dev/null || echo 0)
+    [ "$count" = "0" ] && break
+    urls=$(echo "$resp" | jq -r '.[] | select(.fork == false) | .clone_url')
+    for url in $urls; do
+      clone_or_pull "$url"
+    done
+    page=$((page + 1))
+  done
+fi
+
+# Option B: explicit comma-separated repo list, e.g. for private repos or repos not owned by GITHUB_USERNAME.
+# For private repos, also set GITHUB_TOKEN (a GitHub Personal Access Token with repo read access).
 if [ -n "$GIT_REPOS" ]; then
   IFS=',' read -ra REPOS <<< "$GIT_REPOS"
   for repo in "${REPOS[@]}"; do
     repo_trimmed=$(echo "$repo" | xargs)
     [ -z "$repo_trimmed" ] && continue
-    name=$(basename "$repo_trimmed" .git)
-    target="/workspace/$name"
-    if [ -d "$target/.git" ]; then
-      echo "Updating $name..."
-      git -C "$target" pull --ff-only || echo "WARNING: pull failed for $name, keeping existing copy"
-    else
-      echo "Cloning $name..."
-      if [ -n "$GITHUB_TOKEN" ]; then
-        auth_url=$(echo "$repo_trimmed" | sed "s#https://#https://${GITHUB_TOKEN}@#")
-        git clone "$auth_url" "$target" || echo "WARNING: clone failed for $name"
-      else
-        git clone "$repo_trimmed" "$target" || echo "WARNING: clone failed for $name (private repo? set GITHUB_TOKEN)"
-      fi
+    if [ -n "$GITHUB_TOKEN" ]; then
+      repo_trimmed=$(echo "$repo_trimmed" | sed "s#https://#https://${GITHUB_TOKEN}@#")
     fi
+    clone_or_pull "$repo_trimmed"
   done
-else
-  echo "NOTE: GIT_REPOS is not set — /workspace will stay empty. Set GIT_REPOS in Railway Variables to clone your projects in automatically."
+fi
+
+if [ -z "$GITHUB_USERNAME" ] && [ -z "$GIT_REPOS" ]; then
+  echo "NOTE: neither GITHUB_USERNAME nor GIT_REPOS is set — /workspace will stay empty."
 fi
 
 # opencode server itself stays private, reachable only inside the container
