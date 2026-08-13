@@ -25,8 +25,9 @@ git push -u origin main
    - `APP_PASSWORD` — pick a strong password. This is the ONE password used both by OpenCode Mobile (as Basic Auth) and by the themed browser login page.
    - `APP_USERNAME` — optional, defaults to `opencode`.
    - `OPENCODE_ZEN_API_KEY` — your OpenCode Zen API key (for the Big Pickle model), from https://opencode.ai/zen.
-   - `GITHUB_USERNAME` — set this to `iniharith` and it auto-discovers and clones **all** your public repos on startup (no need to list them one by one).
-   - `GIT_REPOS` — optional, comma-separated list of extra repo URLs to clone (e.g. private ones, or repos not under your own account). Combine with `GITHUB_TOKEN` for private repos.
+   - `GITHUB_USERNAME` — set this to `iniharith` and it auto-discovers and clones all your public repos on startup.
+   - `GITHUB_TOKEN` — optional but required for private repos. Use a fine-grained token restricted to the required repositories with **Contents: Read-only** permission.
+   - `GIT_REPOS` — optional, comma-separated list of extra repo URLs to clone. Token authentication is applied automatically to GitHub HTTPS URLs.
 
    Internally, `opencode serve` runs privately on `127.0.0.1:4096` inside the container. A small gateway (`gateway/`) is the only thing actually exposed publicly — it proxies through to opencode, injecting the right auth automatically.
 4. Go to **Settings > Networking > Generate Domain**. You'll get a URL like `https://opencode-server-production.up.railway.app`.
@@ -45,5 +46,6 @@ The app talks to the API directly with Basic Auth, so it never sees the themed p
 
 ## Notes
 
-- Repos are cloned into `~/projects` (so they show up in the "Open Project" browser, which lists from `$HOME`) and re-pulled on every container restart. Railway containers don't persist disk between deploys unless you attach a volume — if you want clones to survive restarts without re-cloning every time, add a Railway volume mounted at `/root/projects`.
+- Repos are cloned directly into `/root`, where OpenCode's **Open Project** browser starts, so every repository appears as an individual project. OpenCode limits the idle **Recent projects** group to five entries; search by repository name to find the rest.
+- Repositories are pulled on every container restart. Railway containers do not persist disk between deploys unless you attach a volume. If you add a volume, mount it at `/root` so cloned repositories and OpenCode state survive restarts.
 - Keep this project completely separate from your `shop-co` Railway project — don't add this service inside the same project as your production backend.

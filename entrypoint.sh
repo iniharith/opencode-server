@@ -37,32 +37,47 @@ if [ -z "$APP_PASSWORD" ]; then
   echo "WARNING: APP_PASSWORD is not set. The gateway will reject all logins until it is configured in Railway Variables."
 fi
 
-# Clone your repos so opencode's "Open Project" browser (which lists from $HOME) can see them.
-PROJECTS_DIR="$HOME/projects"
-mkdir -p "$PROJECTS_DIR"
+# The Open Project browser starts at $HOME and treats each direct child as a
+# selectable project, so clone repositories directly below it.
+PROJECTS_DIR="$HOME"
 
 clone_or_pull() {
   url="$1"
   name=$(basename "$url" .git)
   target="$PROJECTS_DIR/$name"
+  auth_header=()
+  if [ -n "$GITHUB_TOKEN" ] && [[ "$url" == https://github.com/* ]]; then
+    basic_auth=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')
+    auth_header=(-c "http.https://github.com/.extraheader=Authorization: basic $basic_auth")
+  fi
   if [ -d "$target/.git" ]; then
     echo "Updating $name..."
-    git -C "$target" pull --ff-only || echo "WARNING: pull failed for $name, keeping existing copy"
+    git "${auth_header[@]}" -C "$target" pull --ff-only || echo "WARNING: pull failed for $name, keeping existing copy"
   else
     echo "Cloning $name..."
-    git clone "$url" "$target" || echo "WARNING: clone failed for $name"
+    git "${auth_header[@]}" clone "$url" "$target" || echo "WARNING: clone failed for $name"
   fi
 }
 
-# Option A: auto-discover ALL public repos for a GitHub username via the API.
+# Option A: discover repositories via GitHub. A token includes private repos
+# the token can read; without one, discovery falls back to public repos.
 if [ -n "$GITHUB_USERNAME" ]; then
-  echo "Discovering public repos for $GITHUB_USERNAME..."
+  echo "Discovering repos for $GITHUB_USERNAME..."
   page=1
   while :; do
-    resp=$(curl -sf "https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&page=${page}" || echo "[]")
+    if [ -n "$GITHUB_TOKEN" ]; then
+      resp=$(curl -sf \
+        -H "Authorization: Bearer $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/user/repos?affiliation=owner&per_page=100&page=${page}" || echo "[]")
+    else
+      resp=$(curl -sf \
+        -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/users/${GITHUB_USERNAME}/repos?type=owner&per_page=100&page=${page}" || echo "[]")
+    fi
     count=$(echo "$resp" | jq 'length' 2>/dev/null || echo 0)
     [ "$count" = "0" ] && break
-    urls=$(echo "$resp" | jq -r '.[] | select(.fork == false) | .clone_url')
+    urls=$(echo "$resp" | jq -r --arg owner "${GITHUB_USERNAME,,}" '.[] | select((.owner.login | ascii_downcase) == $owner and .fork == false and .archived == false) | .clone_url')
     for url in $urls; do
       clone_or_pull "$url"
     done
@@ -71,21 +86,18 @@ if [ -n "$GITHUB_USERNAME" ]; then
 fi
 
 # Option B: explicit comma-separated repo list, e.g. for private repos or repos not owned by GITHUB_USERNAME.
-# For private repos, also set GITHUB_TOKEN (a GitHub Personal Access Token with repo read access).
+# For private repos, also set GITHUB_TOKEN (a fine-grained token with Contents: Read-only access).
 if [ -n "$GIT_REPOS" ]; then
   IFS=',' read -ra REPOS <<< "$GIT_REPOS"
   for repo in "${REPOS[@]}"; do
     repo_trimmed=$(echo "$repo" | xargs)
     [ -z "$repo_trimmed" ] && continue
-    if [ -n "$GITHUB_TOKEN" ]; then
-      repo_trimmed=$(echo "$repo_trimmed" | sed "s#https://#https://${GITHUB_TOKEN}@#")
-    fi
     clone_or_pull "$repo_trimmed"
   done
 fi
 
 if [ -z "$GITHUB_USERNAME" ] && [ -z "$GIT_REPOS" ]; then
-  echo "NOTE: neither GITHUB_USERNAME nor GIT_REPOS is set — $PROJECTS_DIR will stay empty."
+  echo "NOTE: neither GITHUB_USERNAME nor GIT_REPOS is set — no repositories will be cloned."
 fi
 
 # opencode server itself stays private, reachable only inside the container
