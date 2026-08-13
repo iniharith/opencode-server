@@ -3,6 +3,7 @@ const cookieParser = require("cookie-parser");
 const crypto = require("crypto");
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const { renderLogin } = require("./login-page");
+const { registerProjectManager } = require("./project-manager");
 
 const PORT = process.env.PORT || 8080;
 const APP_USERNAME = process.env.APP_USERNAME || "opencode";
@@ -82,6 +83,8 @@ app.use((req, res, next) => {
   }
   res.status(401).json({ error: "unauthorized" });
 });
+
+registerProjectManager(app);
 
 // Proxy through to the real opencode server, injecting the credentials it expects internally.
 const internalAuthHeader =

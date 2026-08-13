@@ -44,8 +44,19 @@ Open the domain in a normal browser — you'll see a themed login page (styled t
 
 The app talks to the API directly with Basic Auth, so it never sees the themed page — that only shows up when you open the link in a regular browser.
 
+## 5. Edit Android Documents projects
+
+1. On Android, compress the project folder as a `.zip` using Files by Google or your file manager.
+2. Open `https://<your-railway-domain>/mobile-projects` in Chrome and sign in.
+3. Enter a project name, choose the ZIP from **Documents** or **Downloads**, and tap **Upload & Extract**.
+4. In OpenCode Mobile, open the project using the same project name.
+5. After editing, return to `/mobile-projects` and tap **Download ZIP**.
+6. Extract the downloaded ZIP back into Android Documents if needed.
+
+Uploads default to 100 MB compressed, 500 MB extracted, and 10,000 files. You can change these with `MAX_PROJECT_UPLOAD_MB`, `MAX_PROJECT_EXTRACTED_MB`, and `MAX_PROJECT_FILES` Railway variables. Downloads omit `.git`, dependencies, build caches, ZIP files, and `.env` secrets.
+
 ## Notes
 
 - Repos are cloned directly into `/root`, where OpenCode's **Open Project** browser starts, so every repository appears as an individual project. OpenCode limits the idle **Recent projects** group to five entries; search by repository name to find the rest.
-- Repositories are pulled on every container restart. Railway containers do not persist disk between deploys unless you attach a volume. If you add a volume, mount it at `/root` so cloned repositories and OpenCode state survive restarts.
+- Repositories are pulled on every container restart. Railway containers do not persist disk between deploys unless you attach a volume. Add a Railway volume mounted at `/root` so uploaded Android projects, cloned repositories, and OpenCode state survive restarts.
 - Keep this project completely separate from your `shop-co` Railway project — don't add this service inside the same project as your production backend.

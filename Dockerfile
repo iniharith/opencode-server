@@ -9,8 +9,8 @@ RUN npm install -g opencode-ai@latest
 
 # Gateway (themed login + proxy) dependencies
 WORKDIR /gateway
-COPY gateway/package.json ./
-RUN npm install --omit=dev
+COPY gateway/package*.json ./
+RUN npm ci --omit=dev
 COPY gateway/ ./
 
 COPY entrypoint.sh /entrypoint.sh
